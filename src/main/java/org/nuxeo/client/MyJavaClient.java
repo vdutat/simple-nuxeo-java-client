@@ -29,13 +29,9 @@ public class MyJavaClient {
     private static boolean usePortalSSO = false;
 
     public static void main(String[] args) {
-        NuxeoClient nuxeoClient = null;
+        NuxeoClient nuxeoClient = new NuxeoClient("http://localhost:8080/nuxeo", "Administrator", "Administrator");
         if (usePortalSSO) {
-            // TODO
-//            usePortalSSOAuthentication(nuxeoClient);
-//            nuxeoClient = new NuxeoClient("http://localhost:8080/nuxeo", null, null);
-        } else {
-            nuxeoClient = new NuxeoClient("http://localhost:8080/nuxeo", "Administrator", "Administrator");
+            usePortalSSOAuthentication(nuxeoClient);
         }
         // For defining session and transaction timeout
         nuxeoClient = nuxeoClient.timeout(60).transactionTimeout(60);
