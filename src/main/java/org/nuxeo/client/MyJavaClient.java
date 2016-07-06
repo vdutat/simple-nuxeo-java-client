@@ -18,6 +18,7 @@
  */
 package org.nuxeo.client;
 
+import org.nuxeo.client.api.ConstantsV1;
 import org.nuxeo.client.api.NuxeoClient;
 import org.nuxeo.client.api.objects.Document;
 import org.nuxeo.client.api.objects.blob.Blob;
@@ -29,17 +30,29 @@ public class MyJavaClient {
     private static boolean usePortalSSO = false;
 
     public static void main(String[] args) {
-        NuxeoClient nuxeoClient = new NuxeoClient("http://localhost:8080/nuxeo", "Administrator", "Administrator");
+        NuxeoClient nuxeoClient = new NuxeoClient(
+                "http://localhost:8080/nuxeo",
+//                "https://nightly.nuxeo.com/nuxeo",
+                "Administrator", "Administrator");
         if (usePortalSSO) {
             usePortalSSOAuthentication(nuxeoClient);
         }
         // For defining session and transaction timeout
         nuxeoClient = nuxeoClient.timeout(60).transactionTimeout(60);
 
-        testSUPNXP17085_getFiles(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001");
+//        testSUPNXP17085_getFiles(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001");
+        incrementVersion(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001", "minor");
 
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
+    }
+
+    private static void incrementVersion(NuxeoClient nuxeoClient, String pathOrId, String incr) {
+        System.out.println("<testSUPNXP17085_getFiles> " + pathOrId);
+        Document doc = nuxeoClient.repository().fetchDocumentByPath(pathOrId);
+        System.out.println("version: " + doc.getVersionLabel());
+        doc = nuxeoClient.header(ConstantsV1.HEADER_VERSIONING, incr).repository().updateDocument(doc);
+        System.out.println("version: " + doc.getVersionLabel());
     }
 
     private static void testSUPNXP17085_getFiles(NuxeoClient nuxeoClient, String pathOrId) {
