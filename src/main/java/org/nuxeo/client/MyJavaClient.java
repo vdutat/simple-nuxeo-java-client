@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import org.nuxeo.client.api.ConstantsV1;
 import org.nuxeo.client.api.NuxeoClient;
 import org.nuxeo.client.api.objects.Document;
+import org.nuxeo.client.api.objects.RecordSet;
 import org.nuxeo.client.api.objects.blob.Blob;
 import org.nuxeo.client.api.objects.blob.Blobs;
 import org.nuxeo.client.api.objects.directory.Directory;
@@ -48,11 +49,24 @@ public class MyJavaClient {
 
 //        testSUPNXP17085_getFiles(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001");
 //        incrementVersion(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001", "minor");
-        testSUPNXP17239_addEntryToDirectory(nuxeoClient, "nature", "nature1", "Nature 1");
+//        testSUPNXP17239_addEntryToDirectory(nuxeoClient, "nature", "nature1", "Nature 1");
+        testSUPNXP17352_queryAverage(nuxeoClient, "SELECT AVG(dss:innerSize) FROM Document WHERE ecm:isProxy = 0 AND ecm:isCheckedInVersion = 0 AND ecm:currentLifeCycleState <> 'deleted'");
 
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
     }
+
+	private static void testSUPNXP17352_queryAverage(NuxeoClient nuxeoClient, String query) {
+	    System.out.println("<testSUPNXP17352_queryAverage> " + query);
+	    RecordSet docs = (RecordSet) nuxeoClient.automation("Repository.ResultSetQuery")
+                .param("query", query)
+                .execute();
+        if (!docs.getUuids().isEmpty()) {
+            docs.getUuids().stream().forEach(result -> System.out.println("uuid: " + result));
+        }
+        System.out.println("Total number of results: " + docs.getUuids().size());
+
+	}
 
 	/**
      * https://jira.nuxeo.com/browse/JAVACLIENT-41
