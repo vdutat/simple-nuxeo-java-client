@@ -18,6 +18,8 @@
  */
 package org.nuxeo.client;
 
+import java.io.File;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import org.nuxeo.client.api.ConstantsV1;
@@ -30,6 +32,8 @@ import org.nuxeo.client.api.objects.directory.Directory;
 import org.nuxeo.client.api.objects.directory.DirectoryEntry;
 import org.nuxeo.client.api.objects.directory.DirectoryEntryProperties;
 import org.nuxeo.client.api.objects.directory.DirectoryManager;
+import org.nuxeo.client.api.objects.upload.BatchFile;
+import org.nuxeo.client.api.objects.upload.BatchUpload;
 import org.nuxeo.client.internals.spi.auth.PortalSSOAuthInterceptor;
 
 public class MyJavaClient {
@@ -50,11 +54,35 @@ public class MyJavaClient {
 //        testSUPNXP17085_getFiles(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001");
 //        incrementVersion(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001", "minor");
 //        testSUPNXP17239_addEntryToDirectory(nuxeoClient, "nature", "nature1", "Nature 1");
-        testSUPNXP17352_queryAverage(nuxeoClient, "SELECT AVG(dss:innerSize) FROM Document WHERE ecm:isProxy = 0 AND ecm:isCheckedInVersion = 0 AND ecm:currentLifeCycleState <> 'deleted'");
+//        testSUPNXP17352_queryAverage(nuxeoClient, "SELECT AVG(dss:innerSize) FROM Document WHERE ecm:isProxy = 0 AND ecm:isCheckedInVersion = 0 AND ecm:currentLifeCycleState <> 'deleted'");
+        testSUPNXP18038_uploadPicture(nuxeoClient, "/default-domain/workspaces/SUPNXP-18038", "Pic 001", "/tmp/pic1.jpg");
 
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
     }
+
+    private static void testSUPNXP18038_uploadPicture(NuxeoClient nuxeoClient, String parentDocPath, String docName, String filePath) {
+		System.out.println("<testSUPNXP18038_uploadPicture> " + parentDocPath + ", " + docName + ", " + filePath);
+		// Batch Upload Initialization
+//    	BatchUpload batchUpload = nuxeoClient.fetchUploadManager().enableChunk().chunkSize(10); // enable upload with 10-byte chunks
+		BatchUpload batchUpload = nuxeoClient.fetchUploadManager().enableChunk().chunkSize(10*1024); // enable upload with 10K chunks
+//    	BatchUpload batchUpload = nuxeoClient.fetchUploadManager();
+		// Upload File
+		File file = new File(filePath);
+		String id_batch = batchUpload.getBatchId();
+		batchUpload = batchUpload.upload(file.getName(), file.length(), "image/jpeg", id_batch, "1", file);
+		// List uploaded files
+		List<BatchFile> batchFiles = batchUpload.fetchBatchFiles();
+		batchFiles.stream().forEach(batchFile -> System.out.println("Batch file: " + batchFile));
+		// Create document
+		Document doc = new Document(docName, "Picture");
+		doc.set("dc:title", docName);
+		doc = nuxeoClient.repository().createDocumentByPath(parentDocPath, doc);
+		// Attach file
+		doc.set("file:content", batchUpload.getBatchBlob());
+		doc = doc.updateDocument();
+		System.out.println(doc);
+	}
 
 	private static void testSUPNXP17352_queryAverage(NuxeoClient nuxeoClient, String query) {
 	    System.out.println("<testSUPNXP17352_queryAverage> " + query);
