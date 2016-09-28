@@ -62,31 +62,31 @@ public class MyJavaClient {
     }
 
     private static void testSUPNXP18038_uploadPicture(NuxeoClient nuxeoClient, String parentDocPath, String docName, String filePath) {
-		System.out.println("<testSUPNXP18038_uploadPicture> " + parentDocPath + ", " + docName + ", " + filePath);
-		// Batch Upload Initialization
+        System.out.println("<testSUPNXP18038_uploadPicture> " + parentDocPath + ", " + docName + ", " + filePath);
+        // Batch Upload Initialization
 //    	BatchUpload batchUpload = nuxeoClient.fetchUploadManager().enableChunk().chunkSize(10); // enable upload with 10-byte chunks
-		BatchUpload batchUpload = nuxeoClient.fetchUploadManager().enableChunk().chunkSize(10*1024); // enable upload with 10K chunks
+        BatchUpload batchUpload = nuxeoClient.fetchUploadManager().enableChunk().chunkSize(10*1024); // enable upload with 10K chunks
 //    	BatchUpload batchUpload = nuxeoClient.fetchUploadManager();
-		// Upload File
-		File file = new File(filePath);
-		String id_batch = batchUpload.getBatchId();
-		batchUpload = batchUpload.upload(file.getName(), file.length(), "image/jpeg", id_batch, "1", file);
-		// List uploaded files
-		List<BatchFile> batchFiles = batchUpload.fetchBatchFiles();
-		batchFiles.stream().forEach(batchFile -> System.out.println("Batch file: " + batchFile));
-		// Create document
-		Document doc = new Document(docName, "Picture");
-		doc.set("dc:title", docName);
-		doc = nuxeoClient.repository().createDocumentByPath(parentDocPath, doc);
-		// Attach file
-		doc.set("file:content", batchUpload.getBatchBlob());
-		doc = doc.updateDocument();
-		System.out.println(doc);
-	}
+        // Upload File
+        File file = new File(filePath);
+        String id_batch = batchUpload.getBatchId();
+        batchUpload = batchUpload.upload(file.getName(), file.length(), "image/jpeg", id_batch, "1", file);
+        // List uploaded files
+        List<BatchFile> batchFiles = batchUpload.fetchBatchFiles();
+        batchFiles.stream().forEach(batchFile -> System.out.println("Batch file: " + batchFile));
+        // Create document
+        Document doc = new Document(docName, "Picture");
+        doc.set("dc:title", docName);
+        doc = nuxeoClient.repository().createDocumentByPath(parentDocPath, doc);
+        // Attach file
+        doc.set("file:content", batchUpload.getBatchBlob());
+        doc = doc.updateDocument();
+        System.out.println(doc);
+    }
 
-	private static void testSUPNXP17352_queryAverage(NuxeoClient nuxeoClient, String query) {
-	    System.out.println("<testSUPNXP17352_queryAverage> " + query);
-	    RecordSet docs = (RecordSet) nuxeoClient.automation("Repository.ResultSetQuery")
+    private static void testSUPNXP17352_queryAverage(NuxeoClient nuxeoClient, String query) {
+        System.out.println("<testSUPNXP17352_queryAverage> " + query);
+        RecordSet docs = (RecordSet) nuxeoClient.automation("Repository.ResultSetQuery")
                 .param("query", query)
                 .execute();
         if (!docs.getUuids().isEmpty()) {
@@ -94,9 +94,9 @@ public class MyJavaClient {
         }
         System.out.println("Total number of results: " + docs.getUuids().size());
 
-	}
+    }
 
-	/**
+    /**
      * https://jira.nuxeo.com/browse/JAVACLIENT-41
      *
      * @param nuxeoClient
@@ -104,30 +104,30 @@ public class MyJavaClient {
      * @param id
      * @param label
      */
-	private static void testSUPNXP17239_addEntryToDirectory(NuxeoClient nuxeoClient, String directoryName, String id, String label) {
-		DirectoryManager directoryManager = nuxeoClient.getDirectoryManager();
-		Directory directory = directoryManager.fetchDirectory(directoryName);
-		for (DirectoryEntry entry : directory.getDirectoryEntries()) {
-			System.out.println("entry: " + entry.getProperties().getId() + ", " + entry.getProperties().getLabel());
-		}
-		DirectoryEntry newEntry = new DirectoryEntry();
-		DirectoryEntryProperties newProps = new DirectoryEntryProperties();
-		newProps.setId(id);
-		newProps.setLabel(label);
-		newProps.setOrdering(10000);
-		newProps.setObsolete(1);
-		newEntry.setProperties(newProps);
-		if (directory.getDirectoryEntries().stream()
-				.filter(elem -> elem.getProperties().getId().equals(id)).collect(Collectors.toList()).isEmpty()) {
-			System.out.println("Ading entry...");
-			DirectoryEntry createdEntry = directoryManager.createDirectoryEntry(directoryName, newEntry);
-		}
-		if (!directory.getDirectoryEntries().stream().filter(elem -> elem.getProperties().getId().equals(id)).collect(Collectors.toList()).isEmpty()) {
-			System.out.println("directory " + directoryName + " contains entry " + newEntry.getProperties().getId());
-		}
-	}
+    private static void testSUPNXP17239_addEntryToDirectory(NuxeoClient nuxeoClient, String directoryName, String id, String label) {
+        DirectoryManager directoryManager = nuxeoClient.getDirectoryManager();
+        Directory directory = directoryManager.fetchDirectory(directoryName);
+        for (DirectoryEntry entry : directory.getDirectoryEntries()) {
+            System.out.println("entry: " + entry.getProperties().getId() + ", " + entry.getProperties().getLabel());
+        }
+        DirectoryEntry newEntry = new DirectoryEntry();
+        DirectoryEntryProperties newProps = new DirectoryEntryProperties();
+        newProps.setId(id);
+        newProps.setLabel(label);
+        newProps.setOrdering(10000);
+        newProps.setObsolete(1);
+        newEntry.setProperties(newProps);
+        if (directory.getDirectoryEntries().stream()
+                .filter(elem -> elem.getProperties().getId().equals(id)).collect(Collectors.toList()).isEmpty()) {
+            System.out.println("Ading entry...");
+            DirectoryEntry createdEntry = directoryManager.createDirectoryEntry(directoryName, newEntry);
+        }
+        if (!directory.getDirectoryEntries().stream().filter(elem -> elem.getProperties().getId().equals(id)).collect(Collectors.toList()).isEmpty()) {
+            System.out.println("directory " + directoryName + " contains entry " + newEntry.getProperties().getId());
+        }
+    }
 
-	private static void incrementVersion(NuxeoClient nuxeoClient, String pathOrId, String incr) {
+    private static void incrementVersion(NuxeoClient nuxeoClient, String pathOrId, String incr) {
         System.out.println("<testSUPNXP17085_getFiles> " + pathOrId);
         Document doc = nuxeoClient.repository().fetchDocumentByPath(pathOrId);
         System.out.println("version: " + doc.getVersionLabel());
