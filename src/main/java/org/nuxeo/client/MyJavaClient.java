@@ -18,11 +18,17 @@
  */
 package org.nuxeo.client;
 
+import java.util.stream.Collectors;
+
 import org.nuxeo.client.api.ConstantsV1;
 import org.nuxeo.client.api.NuxeoClient;
 import org.nuxeo.client.api.objects.Document;
 import org.nuxeo.client.api.objects.blob.Blob;
 import org.nuxeo.client.api.objects.blob.Blobs;
+import org.nuxeo.client.api.objects.directory.Directory;
+import org.nuxeo.client.api.objects.directory.DirectoryEntry;
+import org.nuxeo.client.api.objects.directory.DirectoryEntryProperties;
+import org.nuxeo.client.api.objects.directory.DirectoryManager;
 import org.nuxeo.client.internals.spi.auth.PortalSSOAuthInterceptor;
 
 public class MyJavaClient {
@@ -41,13 +47,45 @@ public class MyJavaClient {
         nuxeoClient = nuxeoClient.timeout(60).transactionTimeout(60);
 
 //        testSUPNXP17085_getFiles(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001");
-        incrementVersion(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001", "minor");
+//        incrementVersion(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001", "minor");
+        testSUPNXP17239_addEntryToDirectory(nuxeoClient, "nature", "nature1", "Nature 1");
 
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
     }
 
-    private static void incrementVersion(NuxeoClient nuxeoClient, String pathOrId, String incr) {
+	/**
+     * https://jira.nuxeo.com/browse/JAVACLIENT-41
+     *
+     * @param nuxeoClient
+     * @param directoryName
+     * @param id
+     * @param label
+     */
+	private static void testSUPNXP17239_addEntryToDirectory(NuxeoClient nuxeoClient, String directoryName, String id, String label) {
+		DirectoryManager directoryManager = nuxeoClient.getDirectoryManager();
+		Directory directory = directoryManager.fetchDirectory(directoryName);
+		for (DirectoryEntry entry : directory.getDirectoryEntries()) {
+			System.out.println("entry: " + entry.getProperties().getId() + ", " + entry.getProperties().getLabel());
+		}
+		DirectoryEntry newEntry = new DirectoryEntry();
+		DirectoryEntryProperties newProps = new DirectoryEntryProperties();
+		newProps.setId(id);
+		newProps.setLabel(label);
+		newProps.setOrdering(10000);
+		newProps.setObsolete(1);
+		newEntry.setProperties(newProps);
+		if (directory.getDirectoryEntries().stream()
+				.filter(elem -> elem.getProperties().getId().equals(id)).collect(Collectors.toList()).isEmpty()) {
+			System.out.println("Ading entry...");
+			DirectoryEntry createdEntry = directoryManager.createDirectoryEntry(directoryName, newEntry);
+		}
+		if (!directory.getDirectoryEntries().stream().filter(elem -> elem.getProperties().getId().equals(id)).collect(Collectors.toList()).isEmpty()) {
+			System.out.println("directory " + directoryName + " contains entry " + newEntry.getProperties().getId());
+		}
+	}
+
+	private static void incrementVersion(NuxeoClient nuxeoClient, String pathOrId, String incr) {
         System.out.println("<testSUPNXP17085_getFiles> " + pathOrId);
         Document doc = nuxeoClient.repository().fetchDocumentByPath(pathOrId);
         System.out.println("version: " + doc.getVersionLabel());
