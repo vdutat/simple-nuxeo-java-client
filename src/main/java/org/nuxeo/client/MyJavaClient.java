@@ -44,7 +44,9 @@ public class MyJavaClient {
         NuxeoClient nuxeoClient = new NuxeoClient(
                 "http://localhost:8080/nuxeo",
 //                "https://nightly.nuxeo.com/nuxeo",
-                "Administrator", "Administrator");
+                "Administrator", "Administrator")
+//                .schemas("*")
+                ;
         if (usePortalSSO) {
             usePortalSSOAuthentication(nuxeoClient);
         }
@@ -55,10 +57,24 @@ public class MyJavaClient {
 //        incrementVersion(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001", "minor");
 //        testSUPNXP17239_addEntryToDirectory(nuxeoClient, "nature", "nature1", "Nature 1");
 //        testSUPNXP17352_queryAverage(nuxeoClient, "SELECT AVG(dss:innerSize) FROM Document WHERE ecm:isProxy = 0 AND ecm:isCheckedInVersion = 0 AND ecm:currentLifeCycleState <> 'deleted'");
-        testSUPNXP18038_uploadPicture(nuxeoClient, "/default-domain/workspaces/SUPNXP-18038", "Pic 001", "/tmp/pic1.jpg");
+//        testSUPNXP18038_uploadPicture(nuxeoClient, "/default-domain/workspaces/SUPNXP-18038", "Pic 001", "/tmp/pic1.jpg");
+        testSUPNXP18185_getSourceDocumentForProxy(nuxeoClient, "/default-domain/sections/Section 1/SUPNXP-18185 1");
 
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
+    }
+
+    private static void testSUPNXP18185_getSourceDocumentForProxy(NuxeoClient nuxeoClient, String pathOrId) {
+        System.out.println("<testSUPNXP18185_getSourceDocumentForProxy> " + pathOrId);
+        Document doc = nuxeoClient.repository().fetchDocumentByPath(pathOrId);
+        System.out.println(doc.getPath());
+        doc.getProperties().forEach((key, value) -> {System.out.println(key + ": " + value);});
+        System.out.println("<testSUPNXP18185_getSourceDocumentForProxy> Executing operation 'Proxy.GetSourceDocument'");
+        Document liveDoc = nuxeoClient.automation("Proxy.GetSourceDocument").input(doc).execute();
+        System.out.println(liveDoc.getPath());
+        doc.getProperties().forEach((key, value) -> {System.out.println(key + ": " + value);});
+        // TODO Auto-generated method stub
+
     }
 
     private static void testSUPNXP18038_uploadPicture(NuxeoClient nuxeoClient, String parentDocPath, String docName, String filePath) {
