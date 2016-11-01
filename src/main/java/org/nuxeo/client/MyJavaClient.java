@@ -19,13 +19,18 @@
 package org.nuxeo.client;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.IOUtils;
 import org.nuxeo.client.api.ConstantsV1;
 import org.nuxeo.client.api.NuxeoClient;
 import org.nuxeo.client.api.objects.Document;
 import org.nuxeo.client.api.objects.RecordSet;
+import org.nuxeo.client.api.objects.acl.ACE;
+import org.nuxeo.client.api.objects.acl.ACL;
+import org.nuxeo.client.api.objects.acl.ACP;
 import org.nuxeo.client.api.objects.blob.Blob;
 import org.nuxeo.client.api.objects.blob.Blobs;
 import org.nuxeo.client.api.objects.directory.Directory;
@@ -34,6 +39,9 @@ import org.nuxeo.client.api.objects.directory.DirectoryEntryProperties;
 import org.nuxeo.client.api.objects.directory.DirectoryManager;
 import org.nuxeo.client.api.objects.upload.BatchFile;
 import org.nuxeo.client.api.objects.upload.BatchUpload;
+import org.nuxeo.client.api.objects.user.Group;
+import org.nuxeo.client.api.objects.user.UserManager;
+import org.nuxeo.client.internals.spi.NuxeoClientException;
 import org.nuxeo.client.internals.spi.auth.PortalSSOAuthInterceptor;
 import org.nuxeo.client.internals.spi.auth.TokenAuthInterceptor;
 
@@ -69,10 +77,63 @@ public class MyJavaClient {
 //        testSUPNXP17239_addEntryToDirectory(nuxeoClient, "nature", "nature1", "Nature 1");
 //        testSUPNXP17352_queryAverage(nuxeoClient, "SELECT AVG(dss:innerSize) FROM Document WHERE ecm:isProxy = 0 AND ecm:isCheckedInVersion = 0 AND ecm:currentLifeCycleState <> 'deleted'");
 //        testSUPNXP18038_uploadPicture(nuxeoClient, "/default-domain/workspaces/SUPNXP-18038", "Pic 001", "/tmp/pic1.jpg");
-        testSUPNXP18185_getSourceDocumentForProxy(nuxeoClient, "/default-domain/sections/Section 1/SUPNXP-18185 1");
+//        testSUPNXP18185_getSourceDocumentForProxy(nuxeoClient, "/default-domain/sections/Section 1/SUPNXP-18185 1");
+        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu1", "Read");
+        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
 
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
+    }
+
+    private static void testSUPNXP18288_hasPermission(NuxeoClient nuxeoClient, String pathOrId, String username, String permission) {
+        System.out.println("<testSUPNXP18288_getPermissions> " + pathOrId);
+        Document doc = nuxeoClient.repository().fetchDocumentByPath(pathOrId);
+        System.out.println(doc.getPath());
+        // simply retrieve ACLs
+        UserManager userManager = nuxeoClient.getUserManager();
+        ACP permissions = doc.fetchPermissions();
+        System.out.println("nbr ACLs: " + permissions.getAcls().size());
+        permissions.getAcls().stream().forEach(acl -> {
+            System.out.println("ACL " + acl.getName());
+            acl.getAces().stream().forEach(ace -> {
+                System.out.println("  " + ace.getUsername() + ":" + ace.getPermission() + ":" + ace.getGranted());
+            });
+        });
+        boolean userHasPermission = false;
+        for (ACL acl : permissions.getAcls()) {
+            for (ACE ace : acl.getAces()) {
+                if (ace.getUsername().equals(username)) {
+                    userHasPermission = true;
+                    break;
+                }
+                try {
+                    Group group = userManager.fetchGroup(ace.getUsername());
+                    System.out.println("group: " + group.getGroupName());
+                    // This works ONLY if members of group are users
+                    if (group.getMemberGroups().stream().filter(member -> username.equals(member)).count() > 0) {
+                        userHasPermission = true;
+                        break;
+                    }
+                } catch (NuxeoClientException reason) {
+                    System.err.println("error: " + reason.getStatus() + " exception: " + reason.getException());
+                }
+            }
+            if (userHasPermission) {
+                break;
+            }
+        }
+        System.out.println("1. User '" + username + "' has permission '" + permission + "' on document '" + doc.getPath() + "': " + userHasPermission);
+        // Call a custom operation
+        Blob blob = (Blob) nuxeoClient.automation("UserHasPermission")
+                .input(doc)
+                .param("username", username)
+                .param("permission", permission)
+                .execute();
+        try {
+            System.out.println("2. User '" + username + "' has permission '" + permission + "' on document '" + doc.getPath() + "': " + IOUtils.toString(blob.getStream()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void testSUPNXP18185_getSourceDocumentForProxy(NuxeoClient nuxeoClient, String pathOrId) {
