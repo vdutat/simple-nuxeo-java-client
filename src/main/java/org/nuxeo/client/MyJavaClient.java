@@ -47,8 +47,8 @@ import org.nuxeo.client.internals.spi.auth.TokenAuthInterceptor;
 
 public class MyJavaClient {
 
-    private static boolean usePortalSSO = false;
-    private static boolean useTokenAuth = true;
+    private static boolean usePortalSSO = true;
+    private static boolean useTokenAuth = false;
 
     public static void main(String[] args) {
         String username = "Administrator";
@@ -78,11 +78,17 @@ public class MyJavaClient {
 //        testSUPNXP17352_queryAverage(nuxeoClient, "SELECT AVG(dss:innerSize) FROM Document WHERE ecm:isProxy = 0 AND ecm:isCheckedInVersion = 0 AND ecm:currentLifeCycleState <> 'deleted'");
 //        testSUPNXP18038_uploadPicture(nuxeoClient, "/default-domain/workspaces/SUPNXP-18038", "Pic 001", "/tmp/pic1.jpg");
 //        testSUPNXP18185_getSourceDocumentForProxy(nuxeoClient, "/default-domain/sections/Section 1/SUPNXP-18185 1");
-        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu1", "Read");
-        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
+//        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu1", "Read");
+//        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
+        callOperation(nuxeoClient, "javascript.logContextVariables", "/");
 
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
+    }
+
+    private static void callOperation(NuxeoClient nuxeoClient, String operation, String pathOrId) {
+        System.out.println("<callOperation> " + operation + ", " + pathOrId);
+        nuxeoClient.automation(operation).input(pathOrId).execute();
     }
 
     private static void testSUPNXP18288_hasPermission(NuxeoClient nuxeoClient, String pathOrId, String username, String permission) {
