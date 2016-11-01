@@ -35,20 +35,31 @@ import org.nuxeo.client.api.objects.directory.DirectoryManager;
 import org.nuxeo.client.api.objects.upload.BatchFile;
 import org.nuxeo.client.api.objects.upload.BatchUpload;
 import org.nuxeo.client.internals.spi.auth.PortalSSOAuthInterceptor;
+import org.nuxeo.client.internals.spi.auth.TokenAuthInterceptor;
 
 public class MyJavaClient {
 
     private static boolean usePortalSSO = false;
+    private static boolean useTokenAuth = true;
 
     public static void main(String[] args) {
+        String username = "Administrator";
+        String password = "Administrator";
+        if (useTokenAuth) {
+            username = "";
+            password = "";
+        }
         NuxeoClient nuxeoClient = new NuxeoClient(
                 "http://localhost:8080/nuxeo",
 //                "https://nightly.nuxeo.com/nuxeo",
-                "Administrator", "Administrator")
+                username, password)
 //                .schemas("*")
                 ;
         if (usePortalSSO) {
             usePortalSSOAuthentication(nuxeoClient);
+        } else if (useTokenAuth) {
+            // curl -u Administrator:Administrator "http://localhost:8080/nuxeo/authentication/token?applicationName=MyJavaClient&deviceId=vdutat-XPS-L421X&deviceDescription=vdutat-XPS-L421&permission=rw"
+            useTokenAuthentication(nuxeoClient, "a44284f6-198b-4b32-99c9-32b32abe4f92");
         }
         // For defining session and transaction timeout
         nuxeoClient = nuxeoClient.timeout(60).transactionTimeout(60);
@@ -166,6 +177,10 @@ public class MyJavaClient {
 
     private static void usePortalSSOAuthentication(NuxeoClient client) {
         client.setAuthenticationMethod(new PortalSSOAuthInterceptor("nuxeo5secretkey", "Administrator"));
+    }
+
+    private static void useTokenAuthentication(NuxeoClient client, String token) {
+        client.setAuthenticationMethod(new TokenAuthInterceptor(token));
     }
 
 }
