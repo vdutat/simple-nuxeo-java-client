@@ -39,6 +39,7 @@ import org.nuxeo.client.api.objects.directory.DirectoryEntryProperties;
 import org.nuxeo.client.api.objects.directory.DirectoryManager;
 import org.nuxeo.client.api.objects.upload.BatchFile;
 import org.nuxeo.client.api.objects.upload.BatchUpload;
+import org.nuxeo.client.api.objects.user.CurrentUser;
 import org.nuxeo.client.api.objects.user.Group;
 import org.nuxeo.client.api.objects.user.UserManager;
 import org.nuxeo.client.internals.spi.NuxeoClientException;
@@ -85,6 +86,14 @@ public class MyJavaClient {
 //        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
         callOperation(nuxeoClient, "javascript.logContextVariables", "/");
 
+        CurrentUser currentUser = nuxeoClient.fetchCurrentUser();
+        System.out.println("current user: " + currentUser.getUsername() + ", "
+                + currentUser.getId() + ", "
+                + currentUser.getUserName() + ", "
+                + currentUser.getCurrentUser() + ", "
+                + currentUser.getProperties() + ", "
+                + currentUser.getUserName()
+                );
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
     }
