@@ -64,10 +64,13 @@ public class MyJavaClient {
 //                .schemas("*")
                 ;
         if (usePortalSSO) {
+            System.out.println("Using PORTAL_AUTH");
             usePortalSSOAuthentication(nuxeoClient);
         } else if (useTokenAuth) {
-            // curl -u Administrator:Administrator "http://localhost:8080/nuxeo/authentication/token?applicationName=MyJavaClient&deviceId=vdutat-XPS-L421X&deviceDescription=vdutat-XPS-L421&permission=rw"
-            useTokenAuthentication(nuxeoClient, "a44284f6-198b-4b32-99c9-32b32abe4f92");
+            System.out.println("Using TOKEN_AUTH");
+            useTokenAuthentication(nuxeoClient, acquireToken(username, password));
+        } else {
+            System.out.println("Using BASIC_AUTH");
         }
         // For defining session and transaction timeout
         nuxeoClient = nuxeoClient.timeout(60).transactionTimeout(60);
@@ -248,6 +251,11 @@ public class MyJavaClient {
 
     private static void useTokenAuthentication(NuxeoClient client, String token) {
         client.setAuthenticationMethod(new TokenAuthInterceptor(token));
+    }
+
+    private static String acquireToken(String username, String password) {
+        // curl -u Administrator:Administrator "http://localhost:8080/nuxeo/authentication/token?applicationName=MyJavaClient&deviceId=vdutat-XPS-L421X&deviceDescription=vdutat-XPS-L421&permission=rw"
+        return "a44284f6-198b-4b32-99c9-32b32abe4f92";
     }
 
 }
