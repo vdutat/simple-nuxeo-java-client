@@ -19,8 +19,11 @@
 package org.nuxeo.client;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
@@ -84,7 +87,8 @@ public class MyJavaClient {
 //        testSUPNXP18185_getSourceDocumentForProxy(nuxeoClient, "/default-domain/sections/Section 1/SUPNXP-18185 1");
 //        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu1", "Read");
 //        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
-        callOperation(nuxeoClient, "javascript.logContextVariables", "/");
+//        callOperation(nuxeoClient, "javascript.logContextVariables", "/");
+        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
 
         CurrentUser currentUser = nuxeoClient.fetchCurrentUser();
         System.out.println("current user: " + currentUser.getUsername() + ", "
@@ -96,6 +100,27 @@ public class MyJavaClient {
                 );
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void testSUPNXP18361_fetchBlob(NuxeoClient nuxeoClient, String pathOrId) {
+        System.out.println("<testSUPNXP18361_fetchBlob> " + pathOrId);
+        Document doc = nuxeoClient.schemas("dublincore", "uid", "file").repository().fetchDocumentByPath(pathOrId);
+        Object content = doc.get("file:content");
+        System.out.println(doc.getPath() + ", " + ((Map<String, Object>)content).get("name") + ", " + doc.get("uid:minor_version"));
+        Blob blob = doc.fetchBlob();
+        System.out.println("Blob: " + blob);
+        try {
+            FileOutputStream out = new FileOutputStream("/tmp/" + ((Map<String, Object>)content).get("name"));
+            InputStream in = blob.getStream();
+
+            int len = IOUtils.copy(in, out);
+            System.out.println(len + " bytes copied");
+            in.close();
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static void callOperation(NuxeoClient nuxeoClient, String operation, String pathOrId) {
