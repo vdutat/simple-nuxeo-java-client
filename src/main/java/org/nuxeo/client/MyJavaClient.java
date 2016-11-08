@@ -77,7 +77,7 @@ public class MyJavaClient {
             System.out.println("Using BASIC_AUTH");
         }
         // For defining session and transaction timeout
-        nuxeoClient = nuxeoClient.timeout(60).transactionTimeout(60);
+//        nuxeoClient = nuxeoClient.timeout(60).transactionTimeout(60);
 
 //        testSUPNXP17085_getFiles(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001");
 //        incrementVersion(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001", "minor");
@@ -281,10 +281,12 @@ public class MyJavaClient {
 
     private static void usePortalSSOAuthentication(NuxeoClient client) {
         client.setAuthenticationMethod(new PortalSSOAuthInterceptor("nuxeo5secretkey", "Administrator"));
+        client.timeout(10); // workaround to rebuild retrofit
     }
 
     private static void useTokenAuthentication(NuxeoClient client, String token) {
         client.setAuthenticationMethod(new TokenAuthInterceptor(token));
+        client.timeout(10); // workaround to rebuild retrofit
     }
 
     private static String acquireToken(String username, String password) {
