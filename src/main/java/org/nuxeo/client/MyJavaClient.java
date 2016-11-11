@@ -51,18 +51,22 @@ import org.nuxeo.client.internals.spi.auth.TokenAuthInterceptor;
 
 public class MyJavaClient {
 
-    private static boolean usePortalSSO = true;
+    private static boolean usePortalSSO = false;
     private static boolean useTokenAuth = false;
 
     public static void main(String[] args) {
         String username = "Administrator";
-        String password = "Administrator";
+        String password =
+//                "Administrator"
+                "UGcSL7ho94" // nbme-dev
+                ;
         if (useTokenAuth) {
             username = "";
             password = "";
         }
         NuxeoClient nuxeoClient = new NuxeoClient(
-                "http://localhost:8080/nuxeo",
+                "https://nbmedev.nuxeocloud.com/nuxeo",
+//                "http://localhost:8080/nuxeo",
 //                "https://nightly.nuxeo.com/nuxeo",
                 username, password)
 //                .schemas("*")
@@ -88,8 +92,8 @@ public class MyJavaClient {
 //        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu1", "Read");
 //        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
 //        callOperation(nuxeoClient, "javascript.logContextVariables", "/");
-        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
-
+//        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
+        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/USMLE/LibraryModel/MRI_Scan.jpg");
         CurrentUser currentUser = nuxeoClient.fetchCurrentUser();
         System.out.println("current user: " + currentUser.getUsername() + ", "
                 + currentUser.getId() + ", "
@@ -105,13 +109,15 @@ public class MyJavaClient {
     @SuppressWarnings("unchecked")
     private static void testSUPNXP18361_fetchBlob(NuxeoClient nuxeoClient, String pathOrId) {
         System.out.println("<testSUPNXP18361_fetchBlob> " + pathOrId);
-        Document doc = nuxeoClient.schemas("dublincore", "uid", "file").repository().fetchDocumentByPath(pathOrId);
-        Object content = doc.get("file:content");
-        System.out.println(doc.getPath() + ", " + ((Map<String, Object>)content).get("name") + ", " + doc.get("uid:minor_version"));
+        Document doc = nuxeoClient.schemas("dublincore", "file").repository().fetchDocumentByPath(pathOrId);
+        String field = "file:content";
+        String filename = (String) ((Map<String, Object>)doc.get(field)).get("name");
+        System.out.println(doc.getPath() + ", " + filename);
         Blob blob = doc.fetchBlob();
+//        Blob blob = nuxeoClient.repository().fetchBlobByPath(pathOrId, field);
         System.out.println("Blob: " + blob);
         try {
-            FileOutputStream out = new FileOutputStream("/tmp/" + ((Map<String, Object>)content).get("name"));
+            FileOutputStream out = new FileOutputStream("/tmp/" + filename);
             InputStream in = blob.getStream();
 
             int len = IOUtils.copy(in, out);
