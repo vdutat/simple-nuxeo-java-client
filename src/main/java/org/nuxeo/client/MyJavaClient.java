@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 import org.nuxeo.client.api.ConstantsV1;
 import org.nuxeo.client.api.NuxeoClient;
 import org.nuxeo.client.api.objects.Document;
@@ -49,6 +51,12 @@ import org.nuxeo.client.internals.spi.NuxeoClientException;
 import org.nuxeo.client.internals.spi.auth.PortalSSOAuthInterceptor;
 import org.nuxeo.client.internals.spi.auth.TokenAuthInterceptor;
 
+/**
+ * mvn clean compile exec:java -Dexec.mainClass="org.nuxeo.client.MyJavaClient"
+ *
+ * @author vdutat
+ *
+ */
 public class MyJavaClient {
 
     private static boolean usePortalSSO = false;
@@ -173,13 +181,16 @@ public class MyJavaClient {
         }
         System.out.println("1. User '" + username + "' has permission '" + permission + "' on document '" + doc.getPath() + "': " + userHasPermission);
         // Call a custom operation
-        Blob blob = (Blob) nuxeoClient.automation("UserHasPermission")
-                .input(doc)
+        Blob blob = (Blob) nuxeoClient.automation("Document.UserHasPermission")
+                .input(pathOrId)
                 .param("username", username)
                 .param("permission", permission)
                 .execute();
         try {
-            System.out.println("2. User '" + username + "' has permission '" + permission + "' on document '" + doc.getPath() + "': " + IOUtils.toString(blob.getStream()));
+            String json = org.nuxeo.client.internals.util.IOUtils.read(blob.getStream());
+            System.out.println("blob: " + json);
+            Map<String, Object> jsonObject = new ObjectMapper().readValue(json, new TypeReference<Map<String,Object>>(){});
+            System.out.println("2. User '" + jsonObject.get("username") + "' has permission '" + jsonObject.get("permission") + "' on document '" + jsonObject.get("path") + "': " + jsonObject.get("hasPermission"));
         } catch (IOException e) {
             e.printStackTrace();
         }
