@@ -101,7 +101,8 @@ public class MyJavaClient {
 //        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
 //        callOperation(nuxeoClient, "javascript.logContextVariables", "/");
 //        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
-        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/USMLE/LibraryModel/MRI_Scan.jpg");
+//        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/USMLE/LibraryModel/MRI_Scan.jpg");
+        testSUPNXP20277_fetch(nuxeoClient, "/default-domain/NBE/Collection/124040.jpg");
         CurrentUser currentUser = nuxeoClient.fetchCurrentUser();
         System.out.println("current user: " + currentUser.getUsername() + ", "
                 + currentUser.getId() + ", "
@@ -112,6 +113,13 @@ public class MyJavaClient {
                 );
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
+    }
+    private static void testSUPNXP20277_fetch(NuxeoClient nuxeoClient, String pathOrId) {
+        System.out.println("<testSUPNXP20277_fetch> " + pathOrId);
+        Document doc = nuxeoClient.schemas("dublincore", "file").repository().fetchDocumentByPath(pathOrId);
+        System.out.println(doc.getPath());
+        System.out.println("Title:" + doc.getPropertyValue("dc:title"));
+        System.out.println("Creation date" + doc.getPropertyValue("dc:created"));
     }
 
     @SuppressWarnings("unchecked")
