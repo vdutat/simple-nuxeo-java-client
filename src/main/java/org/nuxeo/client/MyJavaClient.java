@@ -62,19 +62,20 @@ public class MyJavaClient {
     private static boolean usePortalSSO = false;
     private static boolean useTokenAuth = false;
 
+    @SuppressWarnings("unused")
     public static void main(String[] args) {
         String username = "Administrator";
         String password =
-//                "Administrator"
-                "UGcSL7ho94" // nbme-dev
+                "Administrator"
+//                "UGcSL7ho94" // nbme-dev
                 ;
         if (useTokenAuth) {
             username = "";
             password = "";
         }
         NuxeoClient nuxeoClient = new NuxeoClient(
-                "https://nbmedev.nuxeocloud.com/nuxeo",
-//                "http://localhost:8080/nuxeo",
+//                "https://nbmedev.nuxeocloud.com/nuxeo",
+                "http://localhost:8080/nuxeo",
 //                "https://nightly.nuxeo.com/nuxeo",
                 username, password)
 //                .schemas("*")
@@ -91,18 +92,23 @@ public class MyJavaClient {
         // For defining session and transaction timeout
 //        nuxeoClient = nuxeoClient.timeout(60).transactionTimeout(60);
 
-//        testSUPNXP17085_getFiles(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001");
-//        incrementVersion(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001", "minor");
-//        testSUPNXP17239_addEntryToDirectory(nuxeoClient, "nature", "nature1", "Nature 1");
-//        testSUPNXP17352_queryAverage(nuxeoClient, "SELECT AVG(dss:innerSize) FROM Document WHERE ecm:isProxy = 0 AND ecm:isCheckedInVersion = 0 AND ecm:currentLifeCycleState <> 'deleted'");
-//        testSUPNXP18038_uploadPicture(nuxeoClient, "/default-domain/workspaces/SUPNXP-18038", "Pic 001", "/tmp/pic1.jpg");
-//        testSUPNXP18185_getSourceDocumentForProxy(nuxeoClient, "/default-domain/sections/Section 1/SUPNXP-18185 1");
-//        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu1", "Read");
-//        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
-//        callOperation(nuxeoClient, "javascript.logContextVariables", "/");
-//        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
-//        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/USMLE/LibraryModel/MRI_Scan.jpg");
-        testSUPNXP20277_fetch(nuxeoClient, "/default-domain/NBE/Collection/124040.jpg");
+        if (false) {
+            testSUPNXP17085_getFiles(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001");
+            incrementVersion(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001", "minor");
+            testSUPNXP17239_addEntryToDirectory(nuxeoClient, "nature", "nature1", "Nature 1");
+            testSUPNXP17352_queryAverage(nuxeoClient, "SELECT AVG(dss:innerSize) FROM Document WHERE ecm:isProxy = 0 AND ecm:isCheckedInVersion = 0 AND ecm:currentLifeCycleState <> 'deleted'");
+            testSUPNXP18038_uploadPicture(nuxeoClient, "/default-domain/workspaces/SUPNXP-18038", "Pic 001", "/tmp/pic1.jpg");
+            testSUPNXP18185_getSourceDocumentForProxy(nuxeoClient, "/default-domain/sections/Section 1/SUPNXP-18185 1");
+            testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu1", "Read");
+            testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
+            callOperation(nuxeoClient, "javascript.logContextVariables", "/");
+            testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
+            testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/USMLE/LibraryModel/MRI_Scan.jpg");
+            testSUPNXP20277_fetch(nuxeoClient, "/default-domain/NBE/Collection/124040.jpg");
+        } else {
+            testSUPNXP21019_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/blank.pdf");
+            testSUPNXP21019_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/avatar-vincent.png");
+        }
         CurrentUser currentUser = nuxeoClient.fetchCurrentUser();
         System.out.println("current user: " + currentUser.getUsername() + ", "
                 + currentUser.getId() + ", "
@@ -114,6 +120,14 @@ public class MyJavaClient {
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
     }
+    
+    private static void testSUPNXP21019_fetchBlob(NuxeoClient nuxeoClient, String pathOrId) {
+        System.out.println("<testSUPNXP21019_fetchBlob> " + pathOrId);
+        Document file = nuxeoClient.repository().fetchDocumentByPath(pathOrId);
+        Blob blob = file.fetchBlob();
+        System.out.println("Mimetype: " + blob.getMimeType());
+    }
+    
     private static void testSUPNXP20277_fetch(NuxeoClient nuxeoClient, String pathOrId) {
         System.out.println("<testSUPNXP20277_fetch> " + pathOrId);
         Document doc = nuxeoClient.schemas("dublincore", "file").repository().fetchDocumentByPath(pathOrId);
