@@ -96,7 +96,8 @@ public class MyJavaClient {
 //        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu1", "Read");
 //        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
 //        callOperation(nuxeoClient, "javascript.logContextVariables", "/");
-        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
+//        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
+        testSUPNXP22682_removeBlob(nuxeoClient, "/default-domain/workspaces/SUPNXP-22682/File1");
 
         CurrentUser currentUser = nuxeoClient.fetchCurrentUser();
         System.out.println("current user: " + currentUser.getUsername() + ", "
@@ -108,6 +109,11 @@ public class MyJavaClient {
                 );
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
+    }
+
+    private static void testSUPNXP22682_removeBlob(NuxeoClient nuxeoClient, String pathOrId) {
+        System.out.println("<testSUPNXP22682_removeBlob> " + pathOrId);
+        nuxeoClient.automation().newRequest("Blob.RemoveFromDocument").param("xpath", "file:content").input(pathOrId).execute();
     }
 
     @SuppressWarnings("unchecked")
