@@ -46,6 +46,7 @@ import org.nuxeo.client.api.objects.upload.BatchFile;
 import org.nuxeo.client.api.objects.upload.BatchUpload;
 import org.nuxeo.client.api.objects.user.CurrentUser;
 import org.nuxeo.client.api.objects.user.Group;
+import org.nuxeo.client.api.objects.user.User;
 import org.nuxeo.client.api.objects.user.UserManager;
 import org.nuxeo.client.internals.spi.NuxeoClientException;
 import org.nuxeo.client.internals.spi.auth.PortalSSOAuthInterceptor;
@@ -59,7 +60,7 @@ import org.nuxeo.client.internals.spi.auth.TokenAuthInterceptor;
  */
 public class MyJavaClient {
 
-    private static boolean usePortalSSO = false;
+    private static boolean usePortalSSO = true;
     private static boolean useTokenAuth = false;
 
     @SuppressWarnings("unused")
@@ -75,14 +76,18 @@ public class MyJavaClient {
         }
         NuxeoClient nuxeoClient = new NuxeoClient(
 //                "https://nbmedev.nuxeocloud.com/nuxeo",
-                "http://localhost:8080/nuxeo",
+                "https://nbmeprod.cust.io.nuxeo.com/nuxeo",
+//                "http://localhost:8080/nuxeo",
 //                "https://nightly.nuxeo.com/nuxeo",
                 username, password)
 //                .schemas("*")
                 ;
         if (usePortalSSO) {
             System.out.println("Using PORTAL_AUTH");
-            usePortalSSOAuthentication(nuxeoClient);
+            usePortalSSOAuthentication(nuxeoClient,
+//                  "nuxeo5secretkey", "Administrator"
+                    "nuxeoprod810nbmebtlsecretkey", "ContentAdmin@nbme.org" // NBME prod
+);
         } else if (useTokenAuth) {
             System.out.println("Using TOKEN_AUTH");
             useTokenAuthentication(nuxeoClient, acquireToken(username, password));
@@ -105,9 +110,12 @@ public class MyJavaClient {
             testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
             testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/USMLE/LibraryModel/MRI_Scan.jpg");
             testSUPNXP20277_fetch(nuxeoClient, "/default-domain/NBE/Collection/124040.jpg");
-        } else {
             testSUPNXP21019_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/blank.pdf");
             testSUPNXP21019_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/avatar-vincent.png");
+            testSUPNXP21144_fetchContentEnricher(nuxeoClient, "/default-d omain/workspaces/ws1/blank.pdf");
+            testSUPNXP21489_getMemberUsers(nuxeoClient, "grp1", "user1");
+        } else {
+            testSUPNXP17352_queryAverage(nuxeoClient, "SELECT ecm:uuid,dc:title FROM Document WHERE ecm:primaryType = 'Domain'");
         }
         CurrentUser currentUser = nuxeoClient.fetchCurrentUser();
         System.out.println("current user: " + currentUser.getUsername() + ", "
@@ -118,9 +126,50 @@ public class MyJavaClient {
                 + currentUser.getUserName()
                 );
         // To logout (shutdown the client, headers etc...)
+        System.out.println("Logging out...");
         nuxeoClient.logout();
+        System.out.println("Logged out");
+        System.exit(0);
     }
     
+    private static void testSUPNXP21489_getMemberUsers(NuxeoClient nuxeoClient, String groupName, String userName) {
+    	System.out.println("<testSUPNXP21489_getMemberUsers> ");
+    	UserManager userManager = nuxeoClient.header("fetch.group", "memberUsers,memberGroups,parentGroups").getUserManager();
+    	// create group
+    	Group group = new Group();
+    	group.setGroupName(groupName);
+    	group.setGroupLabel(groupName);
+    	Group nuxeoGroup = userManager.createGroup(group);
+    	System.out.println("Group " + nuxeoGroup.getGroupName() + " created");
+    	// create user
+    	User newUser = new User();
+    	newUser.setUserName(userName);
+    	newUser.setCompany("Nuxeo");
+    	newUser.setEmail(userName + "@nuxeo.com");
+    	newUser.setFirstName("to");
+    	newUser.setLastName("to");
+    	newUser.setPassword(userName);
+    	User userObj = userManager.createUser(newUser);
+    	System.out.println("User " + userObj.getUserName() + " created");
+    	// add user to group
+    	User user = userManager.addUserToGroup(userName, groupName);
+    	System.out.println("User " + user.getUserName() + " added to group " + groupName);
+    	// fetch group
+    	Group fetchedGroup = userManager.fetchGroup(groupName);
+    	System.out.println("Fetch group members of group " + fetchedGroup.getGroupName() + ": " + fetchedGroup.getMemberUsers());
+    	System.out.println("Groups of user " + userName + ": " + userManager.fetchUser(userName).getGroups());
+    }
+    
+    private static void testSUPNXP21144_fetchContentEnricher(NuxeoClient nuxeoClient, String pathOrId) {
+        System.out.println("<testSUPNXP21144_fetchContentEnricher> " + pathOrId);
+        Document doc = nuxeoClient.schemas("*").enrichers("acls").repository().fetchDocumentByPath(pathOrId);;
+        System.out.println(doc.getPath());
+        System.out.println("Title:" + doc.getPropertyValue("dc:title"));
+        doc.getContextParameters().forEach((key, value) -> {System.out.println(key + ": " + value);});
+//        System.out.println("ACLs:" + doc.get);
+        // TODO Auto-generated method stub
+    }
+
     private static void testSUPNXP21019_fetchBlob(NuxeoClient nuxeoClient, String pathOrId) {
         System.out.println("<testSUPNXP21019_fetchBlob> " + pathOrId);
         Document file = nuxeoClient.repository().fetchDocumentByPath(pathOrId);
@@ -318,8 +367,8 @@ public class MyJavaClient {
         }
     }
 
-    private static void usePortalSSOAuthentication(NuxeoClient client) {
-        client.setAuthenticationMethod(new PortalSSOAuthInterceptor("nuxeo5secretkey", "Administrator"));
+    private static void usePortalSSOAuthentication(NuxeoClient client, String secretKey, String username) {
+        client.setAuthenticationMethod(new PortalSSOAuthInterceptor(secretKey, username)); 
         client.timeout(10); // workaround to rebuild retrofit
     }
 
