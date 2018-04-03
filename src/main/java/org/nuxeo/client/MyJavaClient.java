@@ -97,6 +97,7 @@ public class MyJavaClient {
 //        testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
 //        callOperation(nuxeoClient, "javascript.logContextVariables", "/");
 //        testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
+//        testSUPNXP22682_removeBlob_automation(nuxeoClient, "/default-domain/workspaces/SUPNXP-22682/File1");
         testSUPNXP22682_removeBlob(nuxeoClient, "/default-domain/workspaces/SUPNXP-22682/File1");
 
         CurrentUser currentUser = nuxeoClient.fetchCurrentUser();
@@ -111,8 +112,25 @@ public class MyJavaClient {
         nuxeoClient.logout();
     }
 
+    /**
+     * THIS DOES NOT WORK, BLOB DOES NOT GET DELETED.
+     * @param nuxeoClient
+     * @param pathOrId
+     */
     private static void testSUPNXP22682_removeBlob(NuxeoClient nuxeoClient, String pathOrId) {
         System.out.println("<testSUPNXP22682_removeBlob> " + pathOrId);
+        Document doc = nuxeoClient.schemas("dublincore", "file").repository().fetchDocumentByPath(pathOrId);
+        Blob blob = doc.fetchBlob();
+        System.out.println("Content: " + blob);
+        doc.set("file:content", null);
+        nuxeoClient.repository().updateDocument(doc);
+        Document doc2 = nuxeoClient.schemas("dublincore", "file").repository().fetchDocumentByPath(pathOrId);
+        Blob blob2 = doc2.fetchBlob();
+        System.out.println("Content: " + blob2);
+    }
+
+    private static void testSUPNXP22682_removeBlob_automation(NuxeoClient nuxeoClient, String pathOrId) {
+        System.out.println("<testSUPNXP22682_removeBlob_automation> " + pathOrId);
         nuxeoClient.automation().newRequest("Blob.RemoveFromDocument").param("xpath", "file:content").input(pathOrId).execute();
     }
 
