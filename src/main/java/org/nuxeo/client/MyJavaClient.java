@@ -110,6 +110,7 @@ public class MyJavaClient {
                 );
         // To logout (shutdown the client, headers etc...)
         nuxeoClient.logout();
+        System.exit(0);
     }
 
     /**
