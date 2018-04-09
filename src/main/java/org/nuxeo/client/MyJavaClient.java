@@ -26,31 +26,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 import org.apache.commons.io.IOUtils;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
-import org.nuxeo.client.api.ConstantsV1;
-import org.nuxeo.client.api.NuxeoClient;
-import org.nuxeo.client.api.objects.Document;
-import org.nuxeo.client.api.objects.RecordSet;
-import org.nuxeo.client.api.objects.acl.ACE;
-import org.nuxeo.client.api.objects.acl.ACL;
-import org.nuxeo.client.api.objects.acl.ACP;
-import org.nuxeo.client.api.objects.blob.Blob;
-import org.nuxeo.client.api.objects.blob.Blobs;
-import org.nuxeo.client.api.objects.directory.Directory;
-import org.nuxeo.client.api.objects.directory.DirectoryEntry;
-import org.nuxeo.client.api.objects.directory.DirectoryEntryProperties;
-import org.nuxeo.client.api.objects.directory.DirectoryManager;
-import org.nuxeo.client.api.objects.upload.BatchFile;
-import org.nuxeo.client.api.objects.upload.BatchUpload;
-import org.nuxeo.client.api.objects.user.CurrentUser;
-import org.nuxeo.client.api.objects.user.Group;
-import org.nuxeo.client.api.objects.user.User;
-import org.nuxeo.client.api.objects.user.UserManager;
-import org.nuxeo.client.internals.spi.NuxeoClientException;
-import org.nuxeo.client.internals.spi.auth.PortalSSOAuthInterceptor;
-import org.nuxeo.client.internals.spi.auth.TokenAuthInterceptor;
+import org.nuxeo.client.cache.ResultCacheInMemory;
+import org.nuxeo.client.objects.Document;
+import org.nuxeo.client.objects.RecordSet;
+import org.nuxeo.client.objects.acl.ACE;
+import org.nuxeo.client.objects.acl.ACL;
+import org.nuxeo.client.objects.acl.ACP;
+import org.nuxeo.client.objects.blob.Blob;
+import org.nuxeo.client.objects.blob.Blobs;
+import org.nuxeo.client.objects.blob.FileBlob;
+import org.nuxeo.client.objects.directory.Directory;
+import org.nuxeo.client.objects.directory.DirectoryEntry;
+import org.nuxeo.client.objects.directory.DirectoryManager;
+import org.nuxeo.client.objects.upload.BatchUpload;
+import org.nuxeo.client.objects.user.Group;
+import org.nuxeo.client.objects.user.User;
+import org.nuxeo.client.objects.user.UserManager;
+import org.nuxeo.client.spi.NuxeoClientException;
+import org.nuxeo.client.spi.auth.PortalSSOAuthInterceptor;
+import org.nuxeo.client.spi.auth.TokenAuthInterceptor;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * mvn clean compile exec:java -Dexec.mainClass="org.nuxeo.client.MyJavaClient"
@@ -60,7 +62,7 @@ import org.nuxeo.client.internals.spi.auth.TokenAuthInterceptor;
  */
 public class MyJavaClient {
 
-    private static boolean usePortalSSO = true;
+    private static boolean usePortalSSO = false;
     private static boolean useTokenAuth = false;
 
     @SuppressWarnings("unused")
@@ -74,14 +76,22 @@ public class MyJavaClient {
             username = "";
             password = "";
         }
-        NuxeoClient nuxeoClient = new NuxeoClient(
-//                "https://nbmedev.nuxeocloud.com/nuxeo",
-                "https://nbmeprod.cust.io.nuxeo.com/nuxeo",
-//                "http://localhost:8080/nuxeo",
-//                "https://nightly.nuxeo.com/nuxeo",
-                username, password)
+        NuxeoClient nuxeoClient = new NuxeoClient.Builder()
+                // To set a cache on client (this line needs the import of nuxeo-java-client-cache)
+//                .cache(new ResultCacheInMemory())
+                .url(
+//                "https://nbmedev.nuxeocloud.com/nuxeo"
+//                "https://nbmeprod.cust.io.nuxeo.com/nuxeo"
+                "http://localhost:8080/nuxeo"
+//                "https://nightly.nuxeo.com/nuxeo"
+                )
+                .authentication(username, password)
 //                .schemas("*")
-                ;
+                // To set read and connect timeout on http client
+//                .readTimeout(60).connectTimeout(60)
+                // To define session and transaction timeout in http headers
+//                .timeout(60).transactionTimeout(60)
+                .connect();
         if (usePortalSSO) {
             System.out.println("Using PORTAL_AUTH");
             usePortalSSOAuthentication(nuxeoClient,
@@ -94,47 +104,83 @@ public class MyJavaClient {
         } else {
             System.out.println("Using BASIC_AUTH");
         }
-        // For defining session and transaction timeout
-//        nuxeoClient = nuxeoClient.timeout(60).transactionTimeout(60);
 
         if (false) {
-            testSUPNXP17085_getFiles(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001");
-            incrementVersion(nuxeoClient, "/default-domain/workspaces/SUPNXP-17085/File 001", "minor");
-            testSUPNXP17239_addEntryToDirectory(nuxeoClient, "nature", "nature1", "Nature 1");
-            testSUPNXP17352_queryAverage(nuxeoClient, "SELECT AVG(dss:innerSize) FROM Document WHERE ecm:isProxy = 0 AND ecm:isCheckedInVersion = 0 AND ecm:currentLifeCycleState <> 'deleted'");
-            testSUPNXP18038_uploadPicture(nuxeoClient, "/default-domain/workspaces/SUPNXP-18038", "Pic 001", "/tmp/pic1.jpg");
-            testSUPNXP18185_getSourceDocumentForProxy(nuxeoClient, "/default-domain/sections/Section 1/SUPNXP-18185 1");
-            testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu1", "Read");
-            testSUPNXP18288_hasPermission(nuxeoClient, "/default-domain/workspaces/ws1/vdu1", "vdu2", "Read");
-            callOperation(nuxeoClient, "javascript.logContextVariables", "/");
-            testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/File 001");
-            testSUPNXP18361_fetchBlob(nuxeoClient, "/default-domain/USMLE/LibraryModel/MRI_Scan.jpg");
-            testSUPNXP20277_fetch(nuxeoClient, "/default-domain/NBE/Collection/124040.jpg");
-            testSUPNXP21019_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/blank.pdf");
-            testSUPNXP21019_fetchBlob(nuxeoClient, "/default-domain/workspaces/ws1/avatar-vincent.png");
-            testSUPNXP21144_fetchContentEnricher(nuxeoClient, "/default-d omain/workspaces/ws1/blank.pdf");
-            testSUPNXP21489_getMemberUsers(nuxeoClient, "grp1", "user1");
+            testSUPNXP22682_removeBlob(nuxeoClient, "/default-domain/workspaces/SUPNXP-22682/File1");
         } else {
-            testSUPNXP17352_queryAverage(nuxeoClient, "SELECT ecm:uuid,dc:title FROM Document WHERE ecm:primaryType = 'Domain'");
+            testSUPNXP22682_removeBlob_automation(nuxeoClient, "/default-domain/workspaces/SUPNXP-22682/File1");
         }
-        CurrentUser currentUser = nuxeoClient.fetchCurrentUser();
-        System.out.println("current user: " + currentUser.getUsername() + ", "
+        User currentUser = nuxeoClient.getCurrentUser();
+        System.out.println("current user: " + currentUser.getUserName() + ", "
                 + currentUser.getId() + ", "
-                + currentUser.getUserName() + ", "
-                + currentUser.getCurrentUser() + ", "
                 + currentUser.getProperties() + ", "
                 + currentUser.getUserName()
                 );
         // To logout (shutdown the client, headers etc...)
-        System.out.println("Logging out...");
-        nuxeoClient.logout();
-        System.out.println("Logged out");
+        System.out.println("Disconnecting ...");
+        nuxeoClient.disconnect();
+        System.out.println("Disconnected");
         System.exit(0);
     }
     
+    private static void testSUPNXP22682_removeBlob(NuxeoClient nuxeoClient, String pathOrId) {
+        System.out.println("<testSUPNXP22682_removeBlob> " + pathOrId);
+        Document doc = nuxeoClient.schemas("dublincore", "file").repository().fetchDocumentByPath(pathOrId);
+        Blob blob = doc.fetchBlob();
+        System.out.println("Content: " + blob);
+        doc.setPropertyValue("file:content", null);
+        doc = nuxeoClient.repository().updateDocument(doc);
+        Document doc2 = nuxeoClient.schemas("dublincore", "file").repository().fetchDocumentByPath(pathOrId);
+        Blob blob2 = doc2.fetchBlob();
+        System.out.println("Content: " + blob2);
+    }
+
+    private static void testSUPNXP22682_removeBlob_automation(NuxeoClient nuxeoClient, String pathOrId) {
+        System.out.println("<testSUPNXP22682_removeBlob_automation> " + pathOrId);
+        Document doc = nuxeoClient.schemas("dublincore", "file").repository().fetchDocumentByPath(pathOrId);
+        doc.fetchBlob(new Callback<FileBlob>() {
+            @Override
+            public void onFailure(Call<FileBlob> call, Throwable t) {
+                System.out.println("BAD " + t.getMessage());
+            }
+
+            @Override
+            public void onResponse(Call<FileBlob> call, Response<FileBlob> response) {
+                if (!response.isSuccessful()) {
+                    System.out.println("call failed!");
+                } else {
+                    System.out.println("GOOD");
+                    Blob blob = response.body();
+                    System.out.println("Content: " + blob);
+//                    nuxeoClient.operation("Blob.RemoveFromDocument").param("xpath", "file:content").input(pathOrId).execute(new Callback<FileBlob>() {
+//                        @Override
+//                        public void onFailure(Call<FileBlob> call, Throwable t) {
+//                            System.out.println(" BAD " + t.getMessage());
+//                        }
+//
+//                        @Override
+//                        public void onResponse(Call<FileBlob> call, Response<FileBlob> response) {
+//                            if (!response.isSuccessful()) {
+//                                System.out.println(" call failed!");
+//                            } else {
+//                                System.out.println(" GOOD");
+//                                Blob blob = response.body();
+//                                System.out.println(" Content: " + blob);
+//                            }
+//                        }
+//                    });
+                }
+            }
+        });
+//        nuxeoClient.operation("Blob.RemoveFromDocument").param("xpath", "file:content").input(pathOrId).execute();
+//        System.out.println("BEFORE fetch blob");
+//        doc.fetchBlob();
+//        System.out.println("AFTER fetch blob");
+    }
+
     private static void testSUPNXP21489_getMemberUsers(NuxeoClient nuxeoClient, String groupName, String userName) {
     	System.out.println("<testSUPNXP21489_getMemberUsers> ");
-    	UserManager userManager = nuxeoClient.header("fetch.group", "memberUsers,memberGroups,parentGroups").getUserManager();
+    	UserManager userManager = nuxeoClient.header("fetch.group", "memberUsers,memberGroups,parentGroups").userManager();
     	// create group
     	Group group = new Group();
     	group.setGroupName(groupName);
@@ -162,7 +208,7 @@ public class MyJavaClient {
     
     private static void testSUPNXP21144_fetchContentEnricher(NuxeoClient nuxeoClient, String pathOrId) {
         System.out.println("<testSUPNXP21144_fetchContentEnricher> " + pathOrId);
-        Document doc = nuxeoClient.schemas("*").enrichers("acls").repository().fetchDocumentByPath(pathOrId);;
+        Document doc = nuxeoClient.schemas("*").enrichersForDocument("acls").repository().fetchDocumentByPath(pathOrId);;
         System.out.println(doc.getPath());
         System.out.println("Title:" + doc.getPropertyValue("dc:title"));
         doc.getContextParameters().forEach((key, value) -> {System.out.println(key + ": " + value);});
@@ -190,7 +236,7 @@ public class MyJavaClient {
         System.out.println("<testSUPNXP18361_fetchBlob> " + pathOrId);
         Document doc = nuxeoClient.schemas("dublincore", "file").repository().fetchDocumentByPath(pathOrId);
         String field = "file:content";
-        String filename = (String) ((Map<String, Object>)doc.get(field)).get("name");
+        String filename = (String) ((Map<String, Object>)doc.getPropertyValue(field)).get("name");
         System.out.println(doc.getPath() + ", " + filename);
         Blob blob = doc.fetchBlob();
 //        Blob blob = nuxeoClient.repository().fetchBlobByPath(pathOrId, field);
@@ -210,7 +256,7 @@ public class MyJavaClient {
 
     private static void callOperation(NuxeoClient nuxeoClient, String operation, String pathOrId) {
         System.out.println("<callOperation> " + operation + ", " + pathOrId);
-        nuxeoClient.automation(operation).input(pathOrId).execute();
+        nuxeoClient.operation(operation).input(pathOrId).execute();
     }
 
     private static void testSUPNXP18288_hasPermission(NuxeoClient nuxeoClient, String pathOrId, String username, String permission) {
@@ -218,7 +264,7 @@ public class MyJavaClient {
         Document doc = nuxeoClient.repository().fetchDocumentByPath(pathOrId);
         System.out.println(doc.getPath());
         // simply retrieve ACLs
-        UserManager userManager = nuxeoClient.getUserManager();
+        UserManager userManager = nuxeoClient.userManager();
         ACP permissions = doc.fetchPermissions();
         System.out.println("nbr ACLs: " + permissions.getAcls().size());
         permissions.getAcls().stream().forEach(acl -> {
@@ -243,7 +289,7 @@ public class MyJavaClient {
                         break;
                     }
                 } catch (NuxeoClientException reason) {
-                    System.err.println("error: " + reason.getStatus() + " exception: " + reason.getException());
+//                    System.err.println("error: " + reason.getStatus() + " exception: " + reason.getException());
                 }
             }
             if (userHasPermission) {
@@ -252,11 +298,12 @@ public class MyJavaClient {
         }
         System.out.println("1. User '" + username + "' has permission '" + permission + "' on document '" + doc.getPath() + "': " + userHasPermission);
         // Call a custom operation
-        Blob blob = (Blob) nuxeoClient.automation("Document.UserHasPermission")
+        Blob blob = (Blob) nuxeoClient.operation("Document.UserHasPermission")
                 .input(pathOrId)
                 .param("username", username)
                 .param("permission", permission)
                 .execute();
+        /* TODO
         try {
             String json = org.nuxeo.client.internals.util.IOUtils.read(blob.getStream());
             System.out.println("blob: " + json);
@@ -265,6 +312,7 @@ public class MyJavaClient {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        */
     }
 
     private static void testSUPNXP18185_getSourceDocumentForProxy(NuxeoClient nuxeoClient, String pathOrId) {
@@ -273,19 +321,18 @@ public class MyJavaClient {
         System.out.println(doc.getPath());
         doc.getProperties().forEach((key, value) -> {System.out.println(key + ": " + value);});
         System.out.println("<testSUPNXP18185_getSourceDocumentForProxy> Executing operation 'Proxy.GetSourceDocument'");
-        Document liveDoc = nuxeoClient.automation("Proxy.GetSourceDocument").input(doc).execute();
+        Document liveDoc = nuxeoClient.operation("Proxy.GetSourceDocument").input(doc).execute();
         System.out.println(liveDoc.getPath());
         doc.getProperties().forEach((key, value) -> {System.out.println(key + ": " + value);});
-        // TODO Auto-generated method stub
-
     }
 
+    /* TODO
     private static void testSUPNXP18038_uploadPicture(NuxeoClient nuxeoClient, String parentDocPath, String docName, String filePath) {
         System.out.println("<testSUPNXP18038_uploadPicture> " + parentDocPath + ", " + docName + ", " + filePath);
         // Batch Upload Initialization
-//    	BatchUpload batchUpload = nuxeoClient.fetchUploadManager().enableChunk().chunkSize(10); // enable upload with 10-byte chunks
-        BatchUpload batchUpload = nuxeoClient.fetchUploadManager().enableChunk().chunkSize(10*1024); // enable upload with 10K chunks
-//    	BatchUpload batchUpload = nuxeoClient.fetchUploadManager();
+//    	BatchUpload batchUpload = nuxeoClient.uploadManager().enableChunk().chunkSize(10); // enable upload with 10-byte chunks
+        BatchUpload batchUpload = nuxeoClient.uploadManager().enableChunk().chunkSize(10*1024); // enable upload with 10K chunks
+//    	BatchUpload batchUpload = nuxeoClient.uploadManager();
         // Upload File
         File file = new File(filePath);
         String id_batch = batchUpload.getBatchId();
@@ -302,10 +349,11 @@ public class MyJavaClient {
         doc = doc.updateDocument();
         System.out.println(doc);
     }
+    */
 
     private static void testSUPNXP17352_queryAverage(NuxeoClient nuxeoClient, String query) {
         System.out.println("<testSUPNXP17352_queryAverage> " + query);
-        RecordSet docs = (RecordSet) nuxeoClient.automation("Repository.ResultSetQuery")
+        RecordSet docs = (RecordSet) nuxeoClient.operation("Repository.ResultSetQuery")
                 .param("query", query)
                 .execute();
         if (!docs.getUuids().isEmpty()) {
@@ -323,11 +371,12 @@ public class MyJavaClient {
      * @param id
      * @param label
      */
+    /* TODO
     private static void testSUPNXP17239_addEntryToDirectory(NuxeoClient nuxeoClient, String directoryName, String id, String label) {
-        DirectoryManager directoryManager = nuxeoClient.getDirectoryManager();
-        Directory directory = directoryManager.fetchDirectory(directoryName);
-        for (DirectoryEntry entry : directory.getDirectoryEntries()) {
-            System.out.println("entry: " + entry.getProperties().getId() + ", " + entry.getProperties().getLabel());
+        DirectoryManager directoryManager = nuxeoClient.directoryManager();
+        Directory directory = directoryManager.directory(directoryName);
+        for (DirectoryEntry entry : directory.fetchEntries().getDirectoryEntries()) {
+            System.out.println("entry: " + entry.getId() + ", " + entry.getLabelProperty());
         }
         DirectoryEntry newEntry = new DirectoryEntry();
         DirectoryEntryProperties newProps = new DirectoryEntryProperties();
@@ -336,16 +385,18 @@ public class MyJavaClient {
         newProps.setOrdering(10000);
         newProps.setObsolete(1);
         newEntry.setProperties(newProps);
-        if (directory.getDirectoryEntries().stream()
-                .filter(elem -> elem.getProperties().getId().equals(id)).collect(Collectors.toList()).isEmpty()) {
+        if (directory.fetchEntries().getDirectoryEntries().stream()
+                .filter(elem -> elem.getId().equals(id)).collect(Collectors.toList()).isEmpty()) {
             System.out.println("Ading entry...");
-            DirectoryEntry createdEntry = directoryManager.createDirectoryEntry(directoryName, newEntry);
+            DirectoryEntry createdEntry = directoryManager.directory(directoryName).createEntry(newEntry);
         }
-        if (!directory.getDirectoryEntries().stream().filter(elem -> elem.getProperties().getId().equals(id)).collect(Collectors.toList()).isEmpty()) {
-            System.out.println("directory " + directoryName + " contains entry " + newEntry.getProperties().getId());
+        if (!directory.fetchEntries().getDirectoryEntries().stream().filter(elem -> elem.getId().equals(id)).collect(Collectors.toList()).isEmpty()) {
+            System.out.println("directory " + directoryName + " contains entry " + newEntry.getId());
         }
     }
+    */
 
+    /* TODO
     private static void incrementVersion(NuxeoClient nuxeoClient, String pathOrId, String incr) {
         System.out.println("<testSUPNXP17085_getFiles> " + pathOrId);
         Document doc = nuxeoClient.repository().fetchDocumentByPath(pathOrId);
@@ -353,11 +404,12 @@ public class MyJavaClient {
         doc = nuxeoClient.header(ConstantsV1.HEADER_VERSIONING, incr).repository().updateDocument(doc);
         System.out.println("version: " + doc.getVersionLabel());
     }
+    */
 
     private static void testSUPNXP17085_getFiles(NuxeoClient nuxeoClient, String pathOrId) {
         System.out.println("<testSUPNXP17085_getFiles> " + pathOrId);
         Document doc = nuxeoClient.repository().fetchDocumentByPath(pathOrId);
-        Blobs blobs = (Blobs) nuxeoClient.automation("Document.GetBlobsByProperty")
+        Blobs blobs = (Blobs) nuxeoClient.operation("Document.GetBlobsByProperty")
                 .input(doc)
                 .param("xpath", "files:files")
                 .execute();
@@ -368,13 +420,11 @@ public class MyJavaClient {
     }
 
     private static void usePortalSSOAuthentication(NuxeoClient client, String secretKey, String username) {
-        client.setAuthenticationMethod(new PortalSSOAuthInterceptor(secretKey, username)); 
-        client.timeout(10); // workaround to rebuild retrofit
+        client.addOkHttpInterceptor(new PortalSSOAuthInterceptor(secretKey, username)); 
     }
 
     private static void useTokenAuthentication(NuxeoClient client, String token) {
-        client.setAuthenticationMethod(new TokenAuthInterceptor(token));
-        client.timeout(10); // workaround to rebuild retrofit
+        client.addOkHttpInterceptor(new TokenAuthInterceptor(token));
     }
 
     private static String acquireToken(String username, String password) {
